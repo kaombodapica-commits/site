@@ -161,7 +161,8 @@ textarea{min-height:90px;resize:vertical}
 .mail-box .addr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.3rem}
 .mail-box code{font:600 1.05rem var(--body);word-break:break-all;user-select:all}
 .mini{font:600 .85rem var(--body);padding:.45rem .8rem;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
-.status{font-size:.9rem;color:var(--leaf);min-height:1.3em}
+.status{font-size:.95rem;font-weight:600;color:var(--leaf);min-height:1.3em}
+.status.bad{color:var(--red)}
 .preview{margin-top:1rem}
 .preview summary{cursor:pointer;font-weight:600;font-size:.92rem}
 .preview pre{white-space:pre-wrap;font:14px/1.5 ui-monospace,Menlo,monospace;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:1rem;margin:.6rem 0 0;max-height:280px;overflow:auto}
@@ -348,14 +349,15 @@ footer .script{font-family:var(--script);color:var(--red);font-size:1.3rem}
       <div class="sec-head">
         <p class="eyebrow">encomendar</p>
         <h2>Faz a tua encomenda.</h2>
-        <p>Preenche os dados e carrega em enviar. Abre-se o teu email com a encomenda já escrita, é só enviar. Respondemos a confirmar o total com portes e a forma de pagamento.</p>
+        <p>Escolhe os molhos, preenche os teus dados e carrega em enviar. A encomenda chega-nos diretamente. Respondemos a confirmar o total com portes e a forma de pagamento.</p>
       </div>
       <div class="order-grid">
         <form class="card" id="form" novalidate>
           <div class="sum-qty" id="qtys"></div>
           <div class="fields">
             <div class="field"><label for="nome">Nome</label><input id="nome" name="nome" autocomplete="name" required></div>
-            <div class="field"><label for="tel">Telemóvel <small>(opcional)</small></label><input id="tel" name="tel" type="tel" autocomplete="tel"></div>
+            <div class="field"><label for="tel">Telemóvel</label><input id="tel" name="tel" type="tel" autocomplete="tel"></div>
+            <div class="field full"><label for="cmail">Email <small>(para te respondermos)</small></label><input id="cmail" name="cmail" type="email" autocomplete="email" placeholder="nome@email.com"></div>
             <div class="field full"><label for="entrega">Entrega</label>
               <select id="entrega" name="entrega"><option>Envio por correio</option><option>Levantamento em mão</option></select></div>
             <div class="field full" id="morada-wrap"><label for="morada">Morada de entrega</label><textarea id="morada" name="morada" autocomplete="street-address" placeholder="Rua, número, código postal, localidade"></textarea></div>
@@ -363,7 +365,8 @@ footer .script{font-family:var(--script);color:var(--red);font-size:1.3rem}
           </div>
           <p class="err" id="err" role="alert"></p>
           <div class="send">
-            <button class="btn" type="submit" id="send">Enviar encomenda por email</button>
+            <button class="btn" type="submit" id="send">Enviar encomenda</button>
+            <p class="status" id="o-status" aria-live="polite"></p>
           </div>
           <details class="preview"><summary>Ver a mensagem que vai ser enviada</summary><pre id="msg"></pre></details>
         </form>
@@ -374,7 +377,7 @@ footer .script{font-family:var(--script);color:var(--red);font-size:1.3rem}
           <div class="total"><span>Total dos produtos</span><strong id="total">0,00 €</strong></div>
           <p class="note">Portes de envio a combinar por email.</p>
           <div class="mail-box">
-            <span style="font-size:.9rem;color:var(--muted)">O email não abriu? Envia a mensagem para:</span>
+            <span style="font-size:.9rem;color:var(--muted)">Problemas a enviar? Copia a mensagem e manda para:</span>
             <div class="addr"><code id="mail-addr"></code><button class="mini" type="button" id="copy-addr">Copiar email</button></div>
             <div style="margin-top:.7rem"><button class="mini" type="button" id="copy-msg">Copiar mensagem</button></div>
             <p class="status" id="status" aria-live="polite"></p>
@@ -451,6 +454,7 @@ function message(){
     "", `Total dos produtos: ${eur(total)} (portes a combinar)`, "",
     `Nome: ${f("nome") || "—"}`,
     `Telemóvel: ${f("tel") || "—"}`,
+    `Email: ${f("cmail") || "—"}`,
     `Entrega: ${$("entrega").value}`
   ];
   if($("entrega").value.startsWith("Envio")) lines.push(`Morada: ${f("morada") || "—"}`);
@@ -477,29 +481,53 @@ function validate(){
   const {items} = message();
   if(!items.length) return "Escolhe pelo menos um frasco.";
   if(!$("nome").value.trim()) { $("nome").focus(); return "Escreve o teu nome."; }
+  const em = $("cmail").value.trim();
+  if(!$("tel").value.trim() && !em) { $("tel").focus(); return "Deixa um telemóvel ou um email para te contactarmos."; }
+  if(em && !EMAIL_RE.test(em)) { $("cmail").focus(); return "Esse email não parece válido. Exemplo: nome@email.com."; }
   if($("entrega").value.startsWith("Envio") && !$("morada").value.trim()) { $("morada").focus(); return "Escreve a morada de entrega, ou escolhe levantamento em mão."; }
   return "";
 }
-$("form").addEventListener("submit", e => {
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/* Envio direto via FormSubmit (sem abrir o programa de email) */
+async function sendForm(fields, btn, statusEl, okMsg){
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = "A enviar…";
+  statusEl.classList.remove("bad"); statusEl.textContent = "";
+  try {
+    const res = await fetch(`https://formsubmit.co/ajax/${EMAIL}`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "Accept": "application/json"},
+      body: JSON.stringify({_template: "box", _captcha: "false", ...fields})
+    });
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok || String(data.success) === "false") throw new Error(data.message || res.status);
+    statusEl.textContent = okMsg;
+    return true;
+  } catch(err) {
+    statusEl.classList.add("bad");
+    statusEl.textContent = "Não foi possível enviar agora. Tenta de novo daqui a pouco, ou envia a mensagem para " + EMAIL + ".";
+    return false;
+  } finally {
+    btn.disabled = false; btn.textContent = label;
+  }
+}
+
+$("form").addEventListener("submit", async e => {
   e.preventDefault();
   const err = validate();
   $("err").textContent = err;
   if(err) return;
   const {text, items} = message();
   const n = items.reduce((s,i)=>s+qty[i.key],0);
-  const subject = `Encomenda Kaombo — ${n} frasco${n>1?"s":""} — ${$("nome").value.trim()}`;
-  openMail(subject, text);
-  $("status").textContent = "Se o email não abriu, copia a mensagem e envia para o endereço acima.";
+  const nome = $("nome").value.trim();
+  const fields = {_subject: `Encomenda Kaombo — ${n} frasco${n>1?"s":""} — ${nome}`, Nome: nome, Encomenda: text};
+  const em = $("cmail").value.trim(); if(em) fields.email = em;
+  const ok = await sendForm(fields, $("send"), $("o-status"), "Encomenda enviada! Vamos responder em breve a confirmar.");
+  if(ok) $("form").querySelectorAll("#notas").forEach(i => i.value = "");
 });
 
-function openMail(subject, body){
-  const a = document.createElement("a");
-  a.href = `mailto:${EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  a.target = "_top"; a.rel = "noopener";
-  document.body.appendChild(a); a.click(); a.remove();
-}
-
-$("sample-form").addEventListener("submit", e => {
+$("sample-form").addEventListener("submit", async e => {
   e.preventDefault();
   const v = id => $(id).value.trim();
   let err = "";
@@ -508,23 +536,27 @@ $("sample-form").addEventListener("submit", e => {
   else if(!v("s-zona")) err = "Diz-nos a zona onde estás.";
   $("s-err").textContent = err;
   if(err) return;
-  openMail(`Pedido de amostra — El Trapicante — ${v("s-nome")}`,
-    `Olá! Gostava de provar uma amostra Kaombo.\n\nSabor: ${$("s-sabor").value}\nNome: ${v("s-nome")}\nTelemóvel: ${v("s-tel")}\nZona: ${v("s-zona")}\n\nFico à espera do El Trapicante.`);
-  $("s-status").textContent = "Pedido preparado no teu email. Envia-o e aguarda contacto. Se não abriu, envia para " + EMAIL + ".";
+  const ok = await sendForm({
+    _subject: `Pedido de amostra — El Trapicante — ${v("s-nome")}`,
+    Nome: v("s-nome"), Telemóvel: v("s-tel"), Zona: v("s-zona"), Sabor: $("s-sabor").value
+  }, e.submitter || e.target.querySelector("button[type=submit]"), $("s-status"), "Pedido recebido. O El Trapicante vai entrar em contacto.");
+  if(ok) e.target.reset();
 });
 
-$("news-form").addEventListener("submit", e => {
+$("news-form").addEventListener("submit", async e => {
   e.preventDefault();
   const mail = $("n-email").value.trim();
   const ints = [...document.querySelectorAll('input[name="n-int"]:checked')].map(c => c.value);
   let err = "";
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) err = "Escreve um email válido, por exemplo nome@email.com.";
+  if(!EMAIL_RE.test(mail)) err = "Escreve um email válido, por exemplo nome@email.com.";
   else if(!ints.length) err = "Escolhe pelo menos um assunto.";
   $("n-err").textContent = err;
   if(err) return;
-  openMail("Newsletter Kaombo — avisos de stock",
-    `Olá! Quero receber a newsletter Kaombo com avisos de stock.\n\nEmail: ${mail}\nAvisar sobre: ${ints.join(", ")}\n\nObrigado!`);
-  $("n-status").textContent = "Pedido preparado no teu email. Envia-o para ficares na lista. Se não abriu, envia para " + EMAIL + ".";
+  const ok = await sendForm({
+    _subject: "Newsletter Kaombo — nova inscrição",
+    email: mail, "Avisar sobre": ints.join(", ")
+  }, e.submitter || e.target.querySelector("button[type=submit]"), $("n-status"), "Inscrito! Vais ser avisado quando houver stock.");
+  if(ok) $("n-email").value = "";
 });
 
 async function copy(text, label){
