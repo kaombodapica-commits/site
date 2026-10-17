@@ -619,6 +619,9 @@ footer .script{font-family:var(--script);color:var(--red);font-size:1.3rem}
 <script>
 /* ===== ALTERA AQUI O EMAIL DAS ENCOMENDAS ===== */
 const EMAIL = "kaombodapica@gmail.com";
+/* URL da aplicação Web do Google Apps Script (folha de encomendas). Vazio = só email. */
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbyYGHD2rittknyYnJAhVlIS_eKPxUdaUt9SJz5_aEzvN7DU6VwX4SluSPi4L0VxgPwQ6w/exec";
+const LANG = document.documentElement.lang && document.documentElement.lang.startsWith("en") ? "en" : "pt";
 /* ============================================== */
 
 const SIZES = [{ml:120, price:3.00, label:"Jar"}, {ml:150, price:4.00, label:"Large jar"}];
@@ -711,10 +714,22 @@ function validate(){
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* Envio direto via FormSubmit (sem abrir o programa de email) */
-async function sendForm(fields, btn, statusEl, okMsg){
+async function sendForm(fields, btn, statusEl, okMsg, tipo, dados){
   const label = btn.textContent;
   btn.disabled = true; btn.textContent = "Sending…";
   statusEl.classList.remove("bad"); statusEl.textContent = "";
+  if(SHEET_URL && tipo){
+    try {
+      const r = await fetch(SHEET_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({tipo, lang: LANG, dados})});
+      const j = await r.json();
+      if(j && j.ok){
+        statusEl.textContent = okMsg + (j.id && /^[A-Z]{3}-/.test(j.id) ? " (" + j.id + ")" : "");
+        btn.disabled = false; btn.textContent = label;
+        return true;
+      }
+      console.warn("Folha:", j);
+    } catch(e){ console.warn("Folha indisponível, a tentar email:", e); }
+  }
   try {
     const res = await fetch(`https://formsubmit.co/ajax/${EMAIL}`, {
       method: "POST",
@@ -752,7 +767,10 @@ $("form").addEventListener("submit", async e => {
   const nome = $("nome").value.trim();
   const fields = {_subject: `Encomenda Kaombo [EN] — ${n} jar${n>1?"s":""} — ${nome}`, Nome: nome, Encomenda: text};
   const em = $("cmail").value.trim(); if(em) fields.email = em;
-  const ok = await sendForm(fields, $("send"), $("o-status"), "Order sent! We’ll reply soon to confirm.");
+  const dados = {nome, tel: $("tel").value.trim(), email: em, entrega: $("entrega").selectedOptions[0].text,
+    morada: ($("entrega").value==="correio") ? $("morada").value.trim() : "", notas: $("notas").value.trim(),
+    qtd: Object.fromEntries(items.map(i => [i.key, qty[i.key]])), resumo: text};
+  const ok = await sendForm(fields, $("send"), $("o-status"), "Order sent! We’ll reply soon to confirm.", "encomenda", dados);
   if(ok) $("form").querySelectorAll("#notas").forEach(i => i.value = "");
 });
 
@@ -768,7 +786,8 @@ $("sample-form").addEventListener("submit", async e => {
   const ok = await sendForm({
     _subject: `Pedido de amostra [EN] — El Trapicante — ${v("s-nome")}`,
     Nome: v("s-nome"), Telemóvel: v("s-tel"), Zona: v("s-zona"), Sabor: $("s-sabor").value
-  }, e.submitter || e.target.querySelector("button[type=submit]"), $("s-status"), "Request received. El Trapicante will be in touch.");
+  }, e.submitter || e.target.querySelector("button[type=submit]"), $("s-status"), "Request received. El Trapicante will be in touch.",
+     "amostra", {nome: v("s-nome"), tel: v("s-tel"), zona: v("s-zona"), sabor: $("s-sabor").value});
   if(ok) e.target.reset();
 });
 
@@ -784,7 +803,8 @@ $("news-form").addEventListener("submit", async e => {
   const ok = await sendForm({
     _subject: "Newsletter Kaombo [EN] — nova inscrição",
     email: mail, "Avisar sobre": ints.join(", ")
-  }, e.submitter || e.target.querySelector("button[type=submit]"), $("n-status"), "You’re in! We’ll let you know when there’s stock.");
+  }, e.submitter || e.target.querySelector("button[type=submit]"), $("n-status"), "You’re in! We’ll let you know when there’s stock.",
+     "newsletter", {email: mail, interesses: ints.join(", ")});
   if(ok) $("n-email").value = "";
 });
 
