@@ -9,12 +9,16 @@
 <meta name="author" content="Kaombo">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://kaombodapica-commits.github.io/site/">
+<link rel="alternate" hreflang="pt-PT" href="https://kaombodapica-commits.github.io/site/">
+<link rel="alternate" hreflang="en" href="https://kaombodapica-commits.github.io/site/en.html">
+<link rel="alternate" hreflang="x-default" href="https://kaombodapica-commits.github.io/site/">
 <meta name="theme-color" content="#D93A33">
 <link rel="icon" type="image/png" sizes="48x48" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="pt_PT">
+<meta property="og:locale:alternate" content="en_GB">
 <meta property="og:site_name" content="Kaombo">
 <meta property="og:title" content="Kaombo · Picante caseiro com malagueta Caombo">
 <meta property="og:description" content="Feito em casa com malagueta, cebola, limão e sal. Sem conservantes. É que dá pica.">
@@ -43,7 +47,10 @@
     "@type": "ContactPoint",
     "contactType": "customer service",
     "email": "kaombodapica@gmail.com",
-    "availableLanguage": "pt"
+    "availableLanguage": [
+     "pt",
+     "en"
+    ]
    }
   },
   {
@@ -51,7 +58,10 @@
    "@id": "https://kaombodapica-commits.github.io/site/#site",
    "url": "https://kaombodapica-commits.github.io/site/",
    "name": "Kaombo",
-   "inLanguage": "pt-PT",
+   "inLanguage": [
+    "pt-PT",
+    "en"
+   ],
    "publisher": {
     "@id": "https://kaombodapica-commits.github.io/site/#marca"
    }
@@ -59,7 +69,7 @@
   {
    "@type": "Product",
    "name": "Kaombo Original — molho picante caseiro",
-   "description": "Molho picante caseiro feito com malagueta Caombo. A receita original da casa. Ingredientes naturais: malagueta, cebola, limão e sal. Sem conservantes artificiais.",
+   "description": "Molho picante caseiro feito com malagueta Caombo. Ingredientes naturais: malagueta, cebola, limão e sal. Sem conservantes artificiais.",
    "brand": {
     "@type": "Brand",
     "name": "Kaombo"
@@ -103,7 +113,7 @@
   {
    "@type": "Product",
    "name": "Kaombo Pimenta-malagueta — molho picante caseiro",
-   "description": "Molho picante caseiro de pimenta-malagueta com limão, suave e aromático. Ingredientes naturais: malagueta, cebola, limão e sal. Sem conservantes artificiais.",
+   "description": "Molho picante caseiro de pimenta-malagueta com limão. Ingredientes naturais: malagueta, cebola, limão e sal. Sem conservantes artificiais.",
    "brand": {
     "@type": "Brand",
     "name": "Kaombo"
@@ -124,6 +134,7 @@
   },
   {
    "@type": "FAQPage",
+   "inLanguage": "pt-PT",
    "mainEntity": [
     {
      "@type": "Question",
@@ -242,7 +253,10 @@ nav{display:flex;align-items:center;gap:1.4rem;font-weight:500}
 nav a{text-decoration:none;color:var(--muted)}
 nav a:hover{color:var(--ink)}
 nav .btn{padding:.65rem 1.1rem;font-size:.95rem}
-@media (max-width:720px){nav a:not(.btn){display:none}}
+.lang{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.lang a{font:700 .78rem/1 var(--body);letter-spacing:.06em;padding:.45rem .6rem;border-radius:999px;color:var(--muted);text-decoration:none}
+.lang a[aria-current]{background:var(--ink);color:var(--bg)}
+@media (max-width:720px){nav a:not(.btn):not(.lang a){display:none}nav{gap:.6rem}}
 
 /* hero */
 .hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:3rem;align-items:center;padding-block:4.5rem 3.5rem}
@@ -399,6 +413,7 @@ footer .script{font-family:var(--script);color:var(--red);font-size:1.3rem}
       <a href="#amostra">Amostra</a>
       <a href="#novidades">Novidades</a>
       <a class="btn" href="#encomendar">Encomendar</a>
+      <div class="lang" aria-label="Idioma"><a href="index.html" hreflang="pt" lang="pt" aria-current="page" title="Português">PT</a><a href="en.html" hreflang="en" lang="en" title="English">EN</a></div>
     </nav>
   </div>
 </header>
@@ -548,7 +563,7 @@ footer .script{font-family:var(--script);color:var(--red);font-size:1.3rem}
             <div class="field"><label for="tel">Telemóvel</label><input id="tel" name="tel" type="tel" autocomplete="tel"></div>
             <div class="field full"><label for="cmail">Email <small>(para te respondermos)</small></label><input id="cmail" name="cmail" type="email" autocomplete="email" placeholder="nome@email.com"></div>
             <div class="field full"><label for="entrega">Entrega</label>
-              <select id="entrega" name="entrega"><option>Envio por correio</option><option>Levantamento em mão</option></select></div>
+              <select id="entrega" name="entrega"><option value="correio">Envio por correio</option><option value="mao">Levantamento em mão</option></select></div>
             <div class="field full" id="morada-wrap"><label for="morada">Morada de entrega</label><textarea id="morada" name="morada" autocomplete="street-address" placeholder="Rua, número, código postal, localidade"></textarea></div>
             <div class="field full"><label for="notas">Notas <small>(opcional)</small></label><input id="notas" name="notas" placeholder="Ex.: é para oferta"></div>
           </div>
@@ -618,7 +633,7 @@ const PRODUCTS = [
 const ITEMS = PRODUCTS.flatMap(p => SIZES.map(s => ({key:`${p.id}-${s.ml}`, p, s})));
 const qty = Object.fromEntries(ITEMS.map(i => [i.key, 0]));
 qty["original-150"] = 1;
-const eur = n => n.toFixed(2).replace(".", ",") + " €";
+const eur = n => n.toFixed(2).replace(".", ",") + " €"; /*EUR*/
 const $ = id => document.getElementById(id);
 
 function stepper(it){
@@ -661,9 +676,9 @@ function message(){
     `Nome: ${f("nome") || "—"}`,
     `Telemóvel: ${f("tel") || "—"}`,
     `Email: ${f("cmail") || "—"}`,
-    `Entrega: ${$("entrega").value}`
+    `Entrega: ${$("entrega").selectedOptions[0].text}`
   ];
-  if($("entrega").value.startsWith("Envio")) lines.push(`Morada: ${f("morada") || "—"}`);
+  if(($("entrega").value==="correio")) lines.push(`Morada: ${f("morada") || "—"}`);
   if(f("notas")) lines.push(`Notas: ${f("notas")}`);
   lines.push("", "Obrigado!");
   return {text: lines.join("\n"), items, total};
@@ -677,7 +692,7 @@ function render(){
     : `<p class="empty">Ainda não escolheste nenhum molho.</p>`;
   $("total").textContent = eur(total);
   $("msg").textContent = text;
-  $("morada-wrap").hidden = !$("entrega").value.startsWith("Envio");
+  $("morada-wrap").hidden = !($("entrega").value==="correio");
 }
 
 $("form").addEventListener("input", render);
@@ -690,7 +705,7 @@ function validate(){
   const em = $("cmail").value.trim();
   if(!$("tel").value.trim() && !em) { $("tel").focus(); return "Deixa um telemóvel ou um email para te contactarmos."; }
   if(em && !EMAIL_RE.test(em)) { $("cmail").focus(); return "Esse email não parece válido. Exemplo: nome@email.com."; }
-  if($("entrega").value.startsWith("Envio") && !$("morada").value.trim()) { $("morada").focus(); return "Escreve a morada de entrega, ou escolhe levantamento em mão."; }
+  if(($("entrega").value==="correio") && !$("morada").value.trim()) { $("morada").focus(); return "Escreve a morada de entrega, ou escolhe levantamento em mão."; }
   return "";
 }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -712,7 +727,15 @@ async function sendForm(fields, btn, statusEl, okMsg){
     return true;
   } catch(err) {
     statusEl.classList.add("bad");
-    statusEl.textContent = "Não foi possível enviar agora. Tenta de novo daqui a pouco, ou envia a mensagem para " + EMAIL + ".";
+    const why = String(err && err.message || "");
+    if(/activat/i.test(why)) {
+      statusEl.textContent = "Formulário ainda não ativado. O dono do site tem de confirmar o email de ativação do FormSubmit em " + EMAIL + ".";
+    } else if(err instanceof TypeError) {
+      statusEl.textContent = "Sem ligação ao serviço de envio (pode ser um bloqueador de anúncios). Tenta noutro navegador ou envia a mensagem para " + EMAIL + ".";
+    } else {
+      statusEl.textContent = "Não foi possível enviar (" + why.slice(0,160) + "). Envia a mensagem para " + EMAIL + ".";
+    }
+    console.warn("FormSubmit:", err);
     return false;
   } finally {
     btn.disabled = false; btn.textContent = label;
